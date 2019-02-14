@@ -4,13 +4,24 @@ const request = require('supertest');
 const { app } = require('./../server');
 const { Todo } = require('./../models/todo');
 
+const todos = [
+  {
+    text: 'First test to do'
+  },
+  {
+    text: 'Second test todo'
+  }
+];
+
 // This function is run before any test case
-// We need an empty database!
+// First delete the database then insert todos defined in array todos above
 beforeEach((done) => {
   // Remove all entries
-  Todo.remove({}).then(() => {
-    done();
-  });
+  Todo.remove({})
+    .then(() => {
+      return Todo.insertMany(todos);
+    })
+    .then(() => done());
 });
 
 // Assumption the database is empty
@@ -22,7 +33,7 @@ describe('POST /todos', () => {
       .post('/todos')
       .send({ text })
       .expect(200)
-      // user defined expect()
+      // customer defined expect()
       .expect((res) => {
         expect(res.body.text).toBe(text);
       })
@@ -31,7 +42,7 @@ describe('POST /todos', () => {
           return done(err);
         }
 
-        Todo.find()
+        Todo.find({ text })
           .then((todos) => {
             // We created one todo entry, so we expect one back
             expect(todos.length).toBe(1);
@@ -55,10 +66,22 @@ describe('POST /todos', () => {
         Todo.find()
           .then((todos) => {
             // We created no entry, so we expect nothing
-            expect(todos.length).toBe(0);
+            expect(todos.length).toBe(2);
             done();
           })
           .catch((e) => done(e));
       });
+  });
+});
+
+describe('GET /todos', () => {
+  it('should get all todos', (done) => {
+    request(app)
+      .get('/todos')
+      .expect(200)
+      .expect((res) => {
+        expect(res.body.todos.length).toBe(2);
+      })
+      .end(done);
   });
 });
